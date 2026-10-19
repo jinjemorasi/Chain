@@ -1,0 +1,6 @@
+package dev.chain.vpn.dto
+
+data class GroupMapItem(
+    var id: String,
+    var remarks: String,
+)

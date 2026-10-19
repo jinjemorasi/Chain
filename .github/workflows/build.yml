@@ -1,0 +1,143 @@
+name: Build Chain APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - master
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v7
+      with:
+        submodules: 'recursive'
+        fetch-depth: '0'
+
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v4
+      with:
+        log-accepted-android-sdk-licenses: false
+        cmdline-tools-version: '14742923'
+        packages: 'platforms;android-37.0 build-tools;37.0.0 platform-tools'
+
+    - name: Install NDK
+      run: |
+        echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
+          --channel=0 \
+          --install "ndk;29.0.14206865"
+        echo "NDK_HOME=$ANDROID_HOME/ndk/29.0.14206865" >> $GITHUB_ENV
+        sed -i '10i\
+        \
+            ndkVersion = "29.0.14206865"' ${{ github.workspace }}/V2rayNG/app/build.gradle.kts
+
+    - name: Restore cached libhevtun
+      id: cache-libhevtun-restore
+      uses: actions/cache/restore@v6
+      with:
+        path: ${{ github.workspace }}/libs
+        key: libhevtun-${{ runner.os }}-${{ env.NDK_HOME }}-${{ hashFiles('.git/modules/hev-socks5-tunnel/HEAD') }}-${{ hashFiles('compile-hevtun.sh') }}
+
+    - name: Build libhevtun
+      if: steps.cache-libhevtun-restore.outputs.cache-hit != 'true'
+      run: |
+        bash compile-hevtun.sh
+
+    - name: Save libhevtun
+      if: steps.cache-libhevtun-restore.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v6
+      with:
+        path: ${{ github.workspace }}/libs
+        key: libhevtun-${{ runner.os }}-${{ env.NDK_HOME }}-${{ hashFiles('.git/modules/hev-socks5-tunnel/HEAD') }}-${{ hashFiles('compile-hevtun.sh') }}
+
+    - name: Copy libhevtun
+      run: |
+        cp -r ${{ github.workspace }}/libs ${{ github.workspace }}/V2rayNG/app
+
+    # The Xray core AAR is a generated input: download the prebuilt libv2ray.aar
+    # published by 2dust/AndroidLibXrayLite for the exact submodule revision
+    # pinned by this checkout. The core itself is never rebuilt or modified here.
+    - name: Fetch AndroidLibXrayLite tag
+      run: |
+        pushd AndroidLibXrayLite
+        CURRENT_TAG=$(git describe --tags --abbrev=0)
+        echo "Current tag in this repo: $CURRENT_TAG"
+        echo "CURRENT_TAG=$CURRENT_TAG" >> $GITHUB_ENV
+        popd
+
+    - name: Download libv2ray
+      uses: robinraju/release-downloader@v1.13
+      with:
+        repository: '2dust/AndroidLibXrayLite'
+        tag: ${{ env.CURRENT_TAG }}
+        fileName: 'libv2ray.aar'
+        out-file-path: V2rayNG/app/libs/
+
+    - name: Setup Java
+      uses: actions/setup-java@v6.0.0
+      with:
+        distribution: 'temurin'
+        java-version: '21'
+
+    # Signing: use the real release keystore when its secrets are configured;
+    # otherwise generate a throwaway CI keystore so the release build type still
+    # produces a signed APK. To plug in a real key later, set the
+    # APP_KEYSTORE_BASE64 / APP_KEYSTORE_PASSWORD / APP_KEYSTORE_ALIAS /
+    # APP_KEY_PASSWORD repository secrets — no workflow change needed.
+    - name: Prepare signing key
+      id: signing
+      run: |
+        if [ -n "${{ secrets.APP_KEYSTORE_BASE64 }}" ]; then
+          echo "${{ secrets.APP_KEYSTORE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/release.jks"
+          echo "store-file=$RUNNER_TEMP/release.jks" >> $GITHUB_OUTPUT
+          echo "store-password=${{ secrets.APP_KEYSTORE_PASSWORD }}" >> $GITHUB_OUTPUT
+          echo "key-alias=${{ secrets.APP_KEYSTORE_ALIAS }}" >> $GITHUB_OUTPUT
+          echo "key-password=${{ secrets.APP_KEY_PASSWORD }}" >> $GITHUB_OUTPUT
+          echo "Using repository release keystore"
+        else
+          keytool -genkeypair \
+            -keystore "$RUNNER_TEMP/ci-debug.jks" \
+            -alias androiddebugkey \
+            -storepass android -keypass android \
+            -keyalg RSA -keysize 2048 -validity 10950 \
+            -dname "CN=Chain CI, OU=CI, O=Chain, C=DE"
+          echo "store-file=$RUNNER_TEMP/ci-debug.jks" >> $GITHUB_OUTPUT
+          echo "store-password=android" >> $GITHUB_OUTPUT
+          echo "key-alias=androiddebugkey" >> $GITHUB_OUTPUT
+          echo "key-password=android" >> $GITHUB_OUTPUT
+          echo "Using generated CI keystore (debug-style signing)"
+        fi
+
+    - name: Build release APK
+      run: |
+        cd ${{ github.workspace }}/V2rayNG
+        echo "sdk.dir=${ANDROID_HOME}" > local.properties
+        chmod 755 gradlew
+        ./gradlew licensePlaystoreReleaseReport
+        ./gradlew assemblePlaystoreRelease \
+          -PABI_FILTERS="arm64-v8a;armeabi-v7a" \
+          -Pandroid.injected.signing.store.file=${{ steps.signing.outputs.store-file }} \
+          -Pandroid.injected.signing.store.password=${{ steps.signing.outputs.store-password }} \
+          -Pandroid.injected.signing.key.alias=${{ steps.signing.outputs.key-alias }} \
+          -Pandroid.injected.signing.key.password=${{ steps.signing.outputs.key-password }}
+
+    - name: Upload arm64-v8a APK
+      uses: actions/upload-artifact@v7
+      if: ${{ success() }}
+      with:
+        name: chain-arm64-v8a
+        path: ${{ github.workspace }}/V2rayNG/app/build/outputs/apk/playstore/release/*arm64-v8a*.apk
+
+    - name: Upload armeabi-v7a APK
+      uses: actions/upload-artifact@v7
+      if: ${{ success() }}
+      with:
+        name: chain-armeabi-v7a
+        path: ${{ github.workspace }}/V2rayNG/app/build/outputs/apk/playstore/release/*armeabi-v7a*.apk
