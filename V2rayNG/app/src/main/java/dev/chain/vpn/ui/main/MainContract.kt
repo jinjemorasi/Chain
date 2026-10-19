@@ -28,7 +28,9 @@ data class MainUiState(
     val doubleColumnDisplay: Boolean = false,
     val shareQRCodeBitmap: android.graphics.Bitmap? = null,
     val freeServersState: FreeServersState = FreeServersState.Idle,
-    val freeServersLastUpdated: Long = -1L
+    val freeServersLastUpdated: Long = -1L,
+    /** Crash report captured by [dev.chain.vpn.util.CrashReporter], shown once. */
+    val lastCrashReport: String? = null
 )
 
 /** State of Chain's one-tap free-servers refresh (source id "chain-free"). */
@@ -90,4 +92,6 @@ sealed interface MainAction {
     // ---- Chain additions ----
     data object RefreshFreeServers : MainAction
     data object DismissFreeServersState : MainAction
+    data object DismissCrashReport : MainAction
+    data object CopyCrashReport : MainAction
 }

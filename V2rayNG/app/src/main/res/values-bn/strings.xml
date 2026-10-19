@@ -587,6 +587,9 @@
     <string name="chain_settings_section_app">App</string>
     <string name="chain_action_retry">Retry</string>
     <string name="chain_action_dismiss">Dismiss</string>
+    <string name="chain_crash_title">Crash report</string>
+    <string name="chain_crash_intro">The app crashed on the last run. Copy this report and send it for investigation:</string>
+    <string name="chain_crash_copy_close">Copy &amp; close</string>
     <string name="chain_just_now">Just now</string>
 
     <string name="chain_action_more_options">More options</string>

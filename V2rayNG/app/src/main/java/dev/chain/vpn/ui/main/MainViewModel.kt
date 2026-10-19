@@ -19,6 +19,7 @@ import dev.chain.vpn.extension.matchesPattern
 import dev.chain.vpn.extension.moveItem
 import dev.chain.vpn.handler.ChainFreeServers
 import dev.chain.vpn.ui.base.BaseViewModel
+import dev.chain.vpn.util.CrashReporter
 import dev.chain.vpn.util.LogUtil
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
@@ -90,6 +91,24 @@ class MainViewModel(
     init {
         collectServiceEvents()
         setupGroupTab()
+        loadLastCrashReport()
+    }
+
+    /** Surfaces a crash captured on the previous run, shown once as a dialog. */
+    private fun loadLastCrashReport() {
+        viewModelScope.launch(ioDispatcher) {
+            val report = CrashReporter.readLastCrash(getApplication())
+            if (report != null) {
+                _uiState.update { it.copy(lastCrashReport = report) }
+            }
+        }
+    }
+
+    private fun dismissCrashReport() {
+        viewModelScope.launch(ioDispatcher) {
+            CrashReporter.clearLastCrash(getApplication())
+            _uiState.update { it.copy(lastCrashReport = null) }
+        }
     }
 
     private fun collectServiceEvents() {
@@ -213,6 +232,10 @@ class MainViewModel(
             MainAction.RefreshFreeServers -> refreshFreeServers()
             MainAction.DismissFreeServersState -> _uiState.update {
                 it.copy(freeServersState = FreeServersState.Idle)
+            }
+            MainAction.DismissCrashReport -> dismissCrashReport()
+            MainAction.CopyCrashReport -> {
+                // Handled by Activity via its onAction lambda (clipboard access)
             }
             is MainAction.ShareQRCode -> {
                 val bitmap = dataSource.share2QRCode(action.guid)
@@ -795,8 +818,8 @@ class MainViewModel(
     /**
      * One-tap refresh of the "chain-free" subscription: downloads the free
      * server list with caching disabled, replaces the previously imported
-     * servers, switches the UI to the free group, and runs the batch latency
-     * test on the new servers.
+     * servers, switches the UI to the free group, and auto-selects the first
+     * server so connect works immediately. Ping tests are manual-only.
      */
     private fun refreshFreeServers() {
         if (freeServersJob?.isActive == true) return

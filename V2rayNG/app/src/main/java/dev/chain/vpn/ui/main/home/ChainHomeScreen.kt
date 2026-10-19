@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -121,17 +122,7 @@ fun ChainHomeScreen(
             onClick = { onAction(MainAction.ToggleService) },
         )
 
-        Spacer(Modifier.height(12.dp))
-
-        Text(
-            text = if (uiState.isRunning) stringResource(R.string.chain_home_disconnect)
-            else stringResource(R.string.chain_home_connect),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onBackground,
-        )
-
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(20.dp))
 
         CurrentServerCard(
             remarks = selected?.profile?.remarks,
@@ -152,11 +143,68 @@ fun ChainHomeScreen(
             lastUpdated = uiState.freeServersLastUpdated,
             onRefreshFree = { onAction(MainAction.RefreshFreeServers) },
             onDismissFree = { onAction(MainAction.DismissFreeServersState) },
-            onTestAll = { onAction(MainAction.TestRealAllServers) },
         )
 
         Spacer(Modifier.height(24.dp))
     }
+
+    if (uiState.lastCrashReport != null) {
+        CrashReportDialog(
+            report = uiState.lastCrashReport!!,
+            onCopyClose = {
+                onAction(MainAction.CopyCrashReport)
+                onAction(MainAction.DismissCrashReport)
+            },
+            onClose = { onAction(MainAction.DismissCrashReport) },
+        )
+    }
+}
+
+@Composable
+private fun CrashReportDialog(
+    report: String,
+    onCopyClose: () -> Unit,
+    onClose: () -> Unit,
+) {
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onClose,
+        title = { Text(stringResource(R.string.chain_crash_title)) },
+        text = {
+            Column {
+                Text(
+                    text = stringResource(R.string.chain_crash_intro),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Spacer(Modifier.height(8.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 280.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+                        .padding(10.dp)
+                        .verticalScroll(rememberScrollState()),
+                ) {
+                    Text(
+                        text = report,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onCopyClose) {
+                Text(stringResource(R.string.chain_crash_copy_close))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onClose) {
+                Text(stringResource(R.string.chain_action_dismiss))
+            }
+        },
+    )
 }
 
 @Composable
@@ -226,19 +274,19 @@ private fun ConnectButton(
 
     Box(
         contentAlignment = Alignment.Center,
-        modifier = Modifier.size(224.dp),
+        modifier = Modifier.size(200.dp),
     ) {
         if (active) {
             Box(
                 modifier = Modifier
-                    .size(224.dp)
+                    .size(200.dp)
                     .scale(pulse)
                     .clip(CircleShape)
                     .background(glow.copy(alpha = 0.16f))
             )
             Box(
                 modifier = Modifier
-                    .size(196.dp)
+                    .size(176.dp)
                     .scale(2f - pulse)
                     .clip(CircleShape)
                     .background(glow.copy(alpha = 0.09f))
@@ -248,15 +296,15 @@ private fun ConnectButton(
             onClick = onClick,
             shape = CircleShape,
             color = buttonColor,
-            shadowElevation = if (active) 16.dp else 6.dp,
-            modifier = Modifier.size(164.dp),
+            shadowElevation = if (active) 12.dp else 4.dp,
+            modifier = Modifier.size(148.dp),
         ) {
             Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
                 Icon(
                     imageVector = Icons.Filled.Power,
                     contentDescription = statusLabel,
                     tint = iconTint,
-                    modifier = Modifier.size(64.dp),
+                    modifier = Modifier.size(56.dp),
                 )
             }
         }
@@ -277,13 +325,7 @@ private fun CurrentServerCard(
         shape = RoundedCornerShape(20.dp),
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Column(Modifier.padding(16.dp)) {
-            Text(
-                text = stringResource(R.string.chain_home_current_server),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(Modifier.height(8.dp))
+        Column(Modifier.padding(14.dp)) {
             if (remarks.isNullOrBlank() && server.isNullOrBlank()) {
                 Text(
                     text = stringResource(R.string.chain_home_no_server),
@@ -294,7 +336,7 @@ private fun CurrentServerCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = extractFlagEmoji(remarks.orEmpty()) ?: "\uD83C\uDF10",
-                        fontSize = 30.sp,
+                        fontSize = 26.sp,
                     )
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
@@ -428,13 +470,12 @@ private fun QuickActions(
     lastUpdated: Long,
     onRefreshFree: () -> Unit,
     onDismissFree: () -> Unit,
-    onTestAll: () -> Unit,
 ) {
     FilledTonalButton(
         onClick = onRefreshFree,
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(14.dp),
     ) {
         Icon(
             imageVector = Icons.Filled.Refresh,
@@ -516,16 +557,6 @@ private fun QuickActions(
         }
 
         FreeServersState.Idle -> {}
-    }
-
-    Spacer(Modifier.height(8.dp))
-
-    TextButton(onClick = onTestAll) {
-        Text(
-            text = stringResource(R.string.chain_home_test_all),
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.secondary,
-        )
     }
 }
 

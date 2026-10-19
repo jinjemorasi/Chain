@@ -116,6 +116,7 @@ class MainActivity : HelperBaseComponentActivity() {
                     is MainAction.EditServer -> editServer(action.guid, action.profile)
                     is MainAction.ShareClipboard -> shareToClipboard(action.guid)
                     is MainAction.ShareFullContent -> shareFullContentAsync(action.guid)
+                    MainAction.CopyCrashReport -> copyCrashReportToClipboard()
                     else -> mainViewModel.onAction(action)
                 }
             },
@@ -125,6 +126,15 @@ class MainActivity : HelperBaseComponentActivity() {
 
     private fun shareToClipboard(guid: String): Boolean =
         AngConfigManager.share2Clipboard(this, guid) == 0
+
+    private fun copyCrashReportToClipboard() {
+        val report = mainViewModel.uiState.value.lastCrashReport ?: return
+        val clipboard = getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager
+        clipboard.setPrimaryClip(
+            android.content.ClipData.newPlainText("chain_crash", report)
+        )
+        toast(R.string.toast_success)
+    }
 
     private fun shareFullContentAsync(guid: String) {
         lifecycleScope.launch(Dispatchers.IO) {

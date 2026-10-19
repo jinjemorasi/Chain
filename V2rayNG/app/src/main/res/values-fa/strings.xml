@@ -587,6 +587,9 @@
     <string name="chain_settings_section_app">برنامه</string>
     <string name="chain_action_retry">تلاش مجدد</string>
     <string name="chain_action_dismiss">بستن</string>
+    <string name="chain_crash_title">گزارش خطای برنامه</string>
+    <string name="chain_crash_intro">برنامه در اجرای قبلی به‌طور غیرمنتظره بسته شد. این گزارش را کپی و برای بررسی بفرست:</string>
+    <string name="chain_crash_copy_close">کپی و بستن</string>
     <string name="chain_just_now">همین حالا</string>
 
     <string name="chain_action_more_options">گزینه‌های بیشتر</string>

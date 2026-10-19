@@ -10,6 +10,7 @@ import dev.chain.vpn.handler.AppLocaleManager
 import dev.chain.vpn.handler.MmkvManager
 import dev.chain.vpn.handler.SettingsManager
 import dev.chain.vpn.ui.compose.ThemeManager
+import dev.chain.vpn.util.CrashReporter
 
 class AngApplication : Application() {
     companion object {
@@ -34,6 +35,9 @@ class AngApplication : Application() {
      */
     override fun onCreate() {
         super.onCreate()
+
+        // Capture uncaught exceptions so the next launch can show the report.
+        CrashReporter.install(this)
 
         MmkvManager.initialize(this)
 
