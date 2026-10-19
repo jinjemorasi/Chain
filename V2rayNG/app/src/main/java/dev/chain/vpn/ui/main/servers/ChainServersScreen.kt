@@ -82,7 +82,6 @@ import dev.chain.vpn.ui.main.home.LatencyBadge
 import dev.chain.vpn.ui.main.home.ProtocolChip
 import dev.chain.vpn.ui.main.home.extractFlagEmoji
 import dev.chain.vpn.ui.main.home.formatLastUpdated
-import dev.chain.vpn.ui.main.home.latencyColor
 import dev.chain.vpn.ui.main.serverMenuActions
 
 @Composable
@@ -179,6 +178,7 @@ fun ChainServersScreen(
                         ServerCard(
                             row = row,
                             selected = row.guid == uiState.selectedGuid,
+                            isTesting = uiState.isTesting,
                             onSelect = { onAction(MainAction.SelectServer(row.guid)) },
                             onAction = onAction,
                             onRemove = { removeServer(row.guid) },
@@ -414,6 +414,7 @@ private fun SearchAndGroupRow(
 private fun ServerCard(
     row: ServerRowUiModel,
     selected: Boolean,
+    isTesting: Boolean,
     onSelect: () -> Unit,
     onAction: (MainAction) -> Unit,
     onRemove: () -> Unit,
@@ -427,17 +428,17 @@ private fun ServerCard(
             containerColor = if (selected) MaterialTheme.colorScheme.primaryContainer
             else MaterialTheme.colorScheme.surfaceContainer
         ),
-        border = if (selected) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
-        shape = RoundedCornerShape(18.dp),
+        border = if (selected) BorderStroke(1.dp, MaterialTheme.colorScheme.primary) else null,
+        shape = RoundedCornerShape(16.dp),
         modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
-            modifier = Modifier.padding(14.dp),
+            modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
                 text = extractFlagEmoji(row.remarks) ?: "\uD83C\uDF10",
-                fontSize = 28.sp,
+                fontSize = 26.sp,
             )
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
@@ -451,12 +452,19 @@ private fun ServerCard(
                 Spacer(Modifier.height(6.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     ProtocolChip(profile.configType.name)
-                    Spacer(Modifier.width(8.dp))
-                    LatencyBadge(row.testDelayMillis)
+                    if (row.testDelayMillis > 0L) {
+                        Spacer(Modifier.width(8.dp))
+                        LatencyBadge(row.testDelayMillis)
+                    } else if (isTesting) {
+                        Spacer(Modifier.width(8.dp))
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.secondary,
+                        )
+                    }
                 }
             }
-            SignalBars(row.testDelayMillis)
-            Spacer(Modifier.width(4.dp))
             Box {
                 IconButton(onClick = { rowMenuExpanded = true }) {
                     Icon(
@@ -496,34 +504,6 @@ private fun ServerCard(
                     }
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun SignalBars(delayMs: Long) {
-    val level = when {
-        delayMs <= 0L -> 0
-        delayMs < 300L -> 4
-        delayMs < 800L -> 3
-        delayMs < 1500L -> 2
-        else -> 1
-    }
-    val color = latencyColor(delayMs)
-    Row(
-        verticalAlignment = Alignment.Bottom,
-        horizontalArrangement = Arrangement.spacedBy(3.dp),
-    ) {
-        repeat(4) { index ->
-            Box(
-                modifier = Modifier
-                    .width(4.dp)
-                    .height((7 + index * 5).dp)
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(
-                        if (index < level) color else color.copy(alpha = 0.22f)
-                    )
-            )
         }
     }
 }

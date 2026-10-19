@@ -138,11 +138,15 @@ class MainViewModel(
                 _uiState.update { it.copy(status = MainStatus.ConnectionTest(event.result)) }
             }
 
-            MainServiceEvent.MeasureConfigSuccess -> {
-                viewModelScope.launch(ioDispatcher) {
-                    val gid = testingGroupId ?: uiState.value.selectedGroupId
-                    cacheMutex.withLock { groupDataCache.remove(gid) }
-                    updateGroupUi(gid, loadGroup(gid, forceRefresh = true))
+            is MainServiceEvent.MeasureConfigSuccess -> {
+                if (event.guid.isNotEmpty()) {
+                    updateSingleTestDelay(event.guid)
+                } else {
+                    viewModelScope.launch(ioDispatcher) {
+                        val gid = testingGroupId ?: uiState.value.selectedGroupId
+                        cacheMutex.withLock { groupDataCache.remove(gid) }
+                        updateGroupUi(gid, loadGroup(gid, forceRefresh = true))
+                    }
                 }
             }
 
@@ -810,6 +814,30 @@ class MainViewModel(
     fun testCurrentServerRealPing() {
         _uiState.update { it.copy(status = MainStatus.Testing) }
         dataSource.testCurrentServerRealPing()
+    }
+
+    /**
+     * Updates only the tested row's latency badge instead of reloading the
+     * whole group, so batch tests feel as instant as stock v2rayNG.
+     */
+    private fun updateSingleTestDelay(guid: String) {
+        viewModelScope.launch(ioDispatcher) {
+            val delay = dataSource.decodeAffiliationInfo(guid)?.testDelayMillis
+                ?: return@launch
+            val gid = testingGroupId ?: uiState.value.selectedGroupId
+            mutableServerGroupState(gid).update { current ->
+                current.copy(
+                    servers = current.servers.map { server ->
+                        if (server.guid == guid) server.copy(testDelayMillis = delay)
+                        else server
+                    },
+                    rows = current.rows.map { row ->
+                        if (row.guid == guid) row.copy(testDelayMillis = delay)
+                        else row
+                    }
+                )
+            }
+        }
     }
 
     // ---------- Chain free servers ----------
