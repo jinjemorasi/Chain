@@ -1,7 +1,19 @@
 package dev.chain.vpn.ui.main
 
 import androidx.annotation.StringRes
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DeleteForever
+import androidx.compose.material.icons.filled.MyLocation
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Sort
+import androidx.compose.material.icons.filled.Speed
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import dev.chain.vpn.R
 import dev.chain.vpn.dto.entities.ProfileItem
@@ -26,17 +38,21 @@ private enum class ImportMenuAction(@StringRes val labelRes: Int, val action: Ma
     Hysteria2(R.string.menu_item_import_config_manually_hysteria2, MainAction.ImportManually(EConfigType.HYSTERIA2.value))
 }
 
-enum class MainMoreMenuAction(@StringRes val labelRes: Int) {
-    RestartService(R.string.title_service_restart),
-    DeleteAll(R.string.title_del_all_config),
-    DeleteDuplicate(R.string.title_del_duplicate_config),
-    DeleteInvalid(R.string.title_del_invalid_config),
-    ExportAll(R.string.title_export_all),
-    LocateSelected(R.string.title_locate_selected_config),
-    SortByTestResults(R.string.title_sort_by_test_results),
-    TestAll(R.string.title_ping_all_server),
-    TestAllRealPing(R.string.title_real_ping_all_server),
-    UpdateSubscriptions(R.string.title_sub_update)
+enum class MainMoreMenuAction(
+    @StringRes val labelRes: Int,
+    val icon: ImageVector,
+    val destructive: Boolean = false,
+) {
+    RestartService(R.string.title_service_restart, Icons.Filled.Refresh),
+    DeleteAll(R.string.title_del_all_config, Icons.Filled.DeleteForever, destructive = true),
+    DeleteDuplicate(R.string.title_del_duplicate_config, Icons.Filled.ContentCopy, destructive = true),
+    DeleteInvalid(R.string.title_del_invalid_config, Icons.Filled.Delete, destructive = true),
+    ExportAll(R.string.title_export_all, Icons.Filled.Share),
+    LocateSelected(R.string.title_locate_selected_config, Icons.Filled.MyLocation),
+    SortByTestResults(R.string.title_sort_by_test_results, Icons.Filled.Sort),
+    TestAll(R.string.title_ping_all_server, Icons.Filled.Speed),
+    TestAllRealPing(R.string.title_real_ping_all_server, Icons.Filled.Bolt),
+    UpdateSubscriptions(R.string.title_sub_update, Icons.Filled.CloudDownload)
 }
 
 internal enum class ServerMenuAction(

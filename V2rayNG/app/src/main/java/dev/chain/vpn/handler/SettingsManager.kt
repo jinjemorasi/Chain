@@ -365,6 +365,9 @@ object SettingsManager {
 
     /**
      * Get delay test URL.
+     * Chain uses Cloudflare's trace endpoint. Values persisted by older
+     * versions (Google generate_204 URLs) are treated as unset so existing
+     * installs migrate to Cloudflare automatically.
      * @param second Whether to use the second URL.
      * @return The delay test URL.
      */
@@ -372,8 +375,15 @@ object SettingsManager {
         return if (second) {
             AppConfig.DELAY_TEST_URL2
         } else {
-            MmkvManager.decodeSettingsString(AppConfig.PREF_DELAY_TEST_URL)
-                ?: AppConfig.DELAY_TEST_URL
+            val stored = MmkvManager.decodeSettingsString(AppConfig.PREF_DELAY_TEST_URL)
+            if (stored.isNullOrEmpty()
+                || stored == "https://www.gstatic.com/generate_204"
+                || stored == "https://www.google.com/generate_204"
+            ) {
+                AppConfig.DELAY_TEST_URL
+            } else {
+                stored
+            }
         }
     }
 

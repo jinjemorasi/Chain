@@ -813,12 +813,7 @@ class MainViewModel(
                 when (val result = ChainFreeServers.refresh()) {
                     is ChainFreeServers.RefreshResult.Success -> {
                         _uiState.update {
-                            it.copy(
-                                freeServersLastUpdated = ChainFreeServers.lastUpdatedMillis(),
-                                freeServersState = FreeServersState.Working(
-                                    dataSource.getString(R.string.chain_free_phase_test)
-                                )
-                            )
+                            it.copy(freeServersLastUpdated = ChainFreeServers.lastUpdatedMillis())
                         }
                         setupGroupTab(forceRefresh = true).join()
                         refreshSelectedGuid()
@@ -827,8 +822,11 @@ class MainViewModel(
                             dataSource.setSelectedSubscriptionId(subId)
                             _uiState.update { it.copy(selectedGroupId = subId) }
                             updateGroupUi(subId, loadGroup(subId, forceRefresh = true))
+                            // Auto-select the first server so the connect button works
+                            // right away. Ping tests are manual-only (no auto test).
+                            mutableServerGroupState(subId).value.servers
+                                .firstOrNull()?.guid?.let { updateSelectedGuid(it) }
                         }
-                        testGroupRealPing(subId)
                         _uiState.update {
                             it.copy(freeServersState = FreeServersState.Success(result.count))
                         }

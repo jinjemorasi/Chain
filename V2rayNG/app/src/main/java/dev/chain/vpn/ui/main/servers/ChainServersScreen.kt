@@ -159,20 +159,15 @@ fun ChainServersScreen(
                         onSelectGroup = { onAction(MainAction.SelectGroup(it)) },
                         onOverflowClick = { showOverflowMenu = true },
                     )
-                    DropdownMenu(
-                        expanded = showOverflowMenu,
-                        onDismissRequest = { showOverflowMenu = false },
-                    ) {
-                        MainMoreMenuAction.entries.forEach { entry ->
-                            DropdownMenuItem(
-                                text = { Text(stringResource(entry.labelRes)) },
-                                onClick = {
-                                    showOverflowMenu = false
-                                    onMoreMenuAction(entry)
-                                },
-                            )
-                        }
-                    }
+                if (showOverflowMenu) {
+                    ChainManageSheet(
+                        onDismiss = { showOverflowMenu = false },
+                        onSelect = { entry ->
+                            showOverflowMenu = false
+                            onMoreMenuAction(entry)
+                        },
+                    )
+                }
                 }
 
                 if (isLoading && groupState.rows.isEmpty()) {
